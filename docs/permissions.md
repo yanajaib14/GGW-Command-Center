@@ -4,9 +4,9 @@ Source of truth: `src/server/auth/permissions.ts` (catalog and default matrix) a
 
 ## Status
 
-In place: the catalog, the frozen default matrix, scopes (`hasPermission`, `allowedLocationIds`), the guardrail functions `assertCanGrant`, `assertCanInviteWithRole` and `assertNotSelf`, and permission-filtered navigation in `src/server/nav.ts`.
+In place: the catalog, the frozen default matrix, scopes (`hasPermission`, `allowedLocationIds`), the guardrail functions `assertCanGrant`, `assertCanInviteWithRole` and `assertNotSelf`, permission-filtered navigation in `src/server/nav.ts`, and the server gate `requirePermission` / `requireActor` in `src/server/auth/require.ts`. Loading permissions from the database (`loadActor` in `src/server/auth/load-actor.ts`, through `isPermission`) is written; it is verified once the test database is configured.
 
-Planned, not built yet: loading permissions from the database (through `isPermission`), the last-Owner rule, audit log writes, the staff and role services, and `npm run setup:owner`. Sections below mark each item.
+Planned, not built yet: the last-Owner rule, audit log writes, the staff and role services, and `npm run setup:owner`. Sections below mark each item.
 
 ## Catalog
 
@@ -23,7 +23,7 @@ Planned, not built yet: loading permissions from the database (through `isPermis
 | `locations.manage` | Create and change locations. |
 | `audit.view` | Read the audit log. |
 
-The catalog is a typed list in code (in place). The database will store which roles hold which keys (planned); unknown keys read from it will be dropped by `isPermission` (planned).
+The catalog is a typed list in code (in place). The database stores which roles hold which keys (`role_permissions`, unrevoked rows only); `loadActor` drops unknown keys through `isPermission`.
 
 ## Role matrix
 
@@ -69,7 +69,7 @@ Status is marked per rule. The functions live in `src/server/auth/guardrails.ts`
 - **No self-change (in place, `assertNotSelf`).** An actor cannot change their own role assignments or status.
 - **Audit (planned).** Invitations (created, accepted, revoked, expired on use), role grants and revokes, employee status changes, role permission changes, location changes and setup runs each write an audit entry in the same transaction as the change.
 
-`assertCanGrant` and `assertCanInviteWithRole` are not gates by themselves. Call `requirePermission("staff.manage" | "staff.invite", scope)` first (`requirePermission` is planned).
+`assertCanGrant` and `assertCanInviteWithRole` are not gates by themselves. Call `requirePermission("staff.manage" | "staff.invite", scope)` first.
 
 ## Adding a permission
 

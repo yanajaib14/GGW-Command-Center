@@ -21,9 +21,9 @@ Stack: Next.js 16 (App Router, `src/`), TypeScript, Tailwind CSS 4, Drizzle on N
 .github/workflows/ci.yml           typecheck, lint, unit+integration tests
 drizzle.config.ts                  drizzle-kit config (schema + migrations paths)
 next.config.ts, tsconfig.json, eslint.config.mjs, vitest.config.mts, vitest.integration.config.mts, playwright.config.ts
-proxy.ts                           Neon Auth middleware (route protection)
 public/manifest.webmanifest, public/sw.js, public/icons/*
 scripts/setup-owner.ts             one-time bootstrap
+src/proxy.ts                       Neon Auth proxy: redirects signed-out visitors only (Next detects it next to src/app)
 src/app/layout.tsx, globals.css    root layout, tokens via Tailwind theme
 src/app/api/auth/[...path]/route.ts  Neon Auth proxy handler
 src/app/(public)/sign-in/page.tsx
@@ -40,11 +40,14 @@ src/components/shell/*             AppShell, NavBar, ExperienceSwitcher, Offline
 src/db/schema/*.ts                 one file per table group
 src/db/migrations/*                generated SQL
 src/server/db/client.ts            Drizzle client + withTransaction
-src/server/auth/neon.ts            createNeonAuth instance
+src/server/env.ts                  Zod-parsed server env, lazy per variable (serverEnv())
+src/server/auth/neon.ts            createNeonAuth instance (lazy, getAuth())
+src/server/auth/session.ts         SessionUser, getSessionUser
 src/server/auth/client.ts          browser createAuthClient
 src/server/auth/permissions.ts     catalog, matrix, Permission type
-src/server/auth/actor.ts           loadActor, hasPermission, allowedLocationIds
-src/server/auth/require.ts         requirePermission, getSessionUser
+src/server/auth/actor.ts           Actor type, hasPermission, allowedLocationIds (pure; reaches client bundles via nav)
+src/server/auth/load-actor.ts      loadActor (database; server-only)
+src/server/auth/require.ts         requirePermission, requireActor (re-exports getSessionUser)
 src/server/auth/guardrails.ts      assertCanGrant, assertNotSelf
 src/server/auth/errors.ts          Unauthenticated, Forbidden, NotFound, Conflict, Invalid
 src/server/audit/write.ts          writeAudit
@@ -83,7 +86,8 @@ Global constraints:
 
 Working rules:
 
-- Every server action and protected page calls `requirePermission` first.
+- Every server action, protected page and route handler calls `requirePermission` (or `requireActor`) first. `src/proxy.ts` only redirects; it is not authorization.
+- Server-only modules start with `import "server-only"`; Vitest aliases it to an empty module.
 - Reuse `src/components/ui` before creating components.
 - Business logic never lives in `src/app`; pages and routes call `src/features` and `src/server`.
 - Never paste or commit secrets.
