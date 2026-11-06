@@ -142,16 +142,17 @@ assignment per (`employee_id`, `role_id`, `location_id`).
 **invitations**
 `id`, `organization_id`, `employee_id` (the `invited` employee row created
 with the invitation), `email`, `location_id`, `role_id`, `token_hash`
-(SHA-256 of a random 32-byte token; the raw token appears only in the email
-link), `invited_by_employee_id`, `expires_at` (7 days after creation),
-`accepted_at`, `revoked_at`, timestamps.
+(SHA-256 of a random 32-byte token; the raw token appears only in the invite
+link), `grants_org_wide` (boolean, default false; when true the accepted role
+applies at all locations, used for the first Owner), `invited_by_employee_id`,
+`expires_at` (7 days after creation), `accepted_at`, `revoked_at`, timestamps.
 
 **audit_log**
 `id`, `organization_id`, `location_id` (nullable), `actor_employee_id`
 (nullable for system actions such as setup), `action` (e.g.
 `invitation.created`), `entity_type`, `entity_id`, `before` (jsonb, nullable),
-`after` (jsonb, nullable), `created_at`. The application database role has
-INSERT and SELECT only on this table; UPDATE and DELETE are revoked.
+`after` (jsonb, nullable), `created_at`. A database trigger rejects every
+UPDATE and DELETE on this table, whichever database role connects.
 
 ### Deliberately absent
 
@@ -200,7 +201,9 @@ typed list. The database stores which roles hold which permissions.
 ### Guardrails
 
 - **No escalation:** an actor can only grant a role whose permissions are all
-  held by the actor. Managers can therefore invite Employees only.
+  held by the actor. In addition, inviting someone into a role that includes
+  `staff.invite` requires `staff.manage`, so Managers can invite Employees
+  only.
 - **Last Owner:** the last active, organization-wide Owner cannot be revoked,
   suspended or marked as left.
 - **No self-change:** an actor cannot change their own role assignments or
@@ -214,8 +217,11 @@ typed list. The database stores which roles hold which permissions.
 
 1. A user with `staff.invite` submits name, email, location and role.
 2. The server checks the no-escalation rule, creates the `invited` employee row
-   and the invitation, writes the audit entry, and emails a link containing the
-   raw token.
+   and the invitation, writes the audit entry, and shows the inviter a link
+   containing the raw token to copy and send by text or email. (Neon Managed
+   Auth sends only its own sign-in emails, so automatic invite emails wait for
+   a custom mail sender; delivery sits behind an `InviteDelivery` interface so
+   it can be added without changing the flow.)
 3. The invitee opens the link and signs in with an email one-time code.
 4. The server verifies: token hash matches, invitation not expired, revoked or
    accepted, and the signed-in email equals the invitation email
