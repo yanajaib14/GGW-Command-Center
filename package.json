@@ -15,6 +15,7 @@
     "check": "npm run typecheck && npm run lint && npm run test:unit"
   },
   "dependencies": {
+    "@neon/auth": "^0.8.2",
     "next": "16.4.5",
     "react": "19.3.0",
     "react-dom": "19.3.0",
