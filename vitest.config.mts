@@ -9,5 +9,7 @@ export default defineConfig({
     environment: "node",
     setupFiles: ["./tests/setup.ts"],
     include: ["tests/**/*.test.{ts,tsx}"],
+    // Integration tests need a database; they run via vitest.integration.config.mts.
+    exclude: ["**/node_modules/**", "tests/integration/**"],
   },
 });
