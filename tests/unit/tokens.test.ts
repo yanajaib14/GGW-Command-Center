@@ -34,6 +34,22 @@ describe("invite tokens", () => {
     expect(inviteUrl("abc")).toBe("http://localhost:3000/invite/abc");
   });
 
+  it("hashInviteToken matches the SHA-256 known answer", () => {
+    expect(hashInviteToken("abc")).toBe(
+      "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    );
+  });
+
+  it("inviteUrl trims whitespace around APP_URL", () => {
+    vi.stubEnv("APP_URL", " http://x/ ");
+    expect(inviteUrl("abc")).toBe("http://x/invite/abc");
+  });
+
+  it("inviteUrl throws when APP_URL is only whitespace", () => {
+    vi.stubEnv("APP_URL", "  ");
+    expect(() => inviteUrl("abc")).toThrow(/APP_URL/);
+  });
+
   it("inviteUrl throws naming APP_URL when unset", () => {
     vi.stubEnv("APP_URL", "");
     expect(() => inviteUrl("abc")).toThrow(/APP_URL/);

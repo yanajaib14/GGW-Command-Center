@@ -76,7 +76,6 @@ describe("permission catalog", () => {
   });
 
   it("default matrix is frozen", () => {
-    "use strict";
     const matrix = DEFAULT_ROLE_PERMISSIONS as unknown as Record<
       string,
       string[]
@@ -85,9 +84,13 @@ describe("permission catalog", () => {
     expect(() => {
       matrix.owner = [];
     }).toThrow(TypeError);
-    expect(() => {
-      matrix.employee?.push("audit.view");
-    }).toThrow(TypeError);
+    for (const role of ["owner", "manager", "employee"]) {
+      const list = matrix[role];
+      expect(Object.isFrozen(list), role).toBe(true);
+      expect(() => {
+        list?.push("audit.view");
+      }, role).toThrow(TypeError);
+    }
     expect(DEFAULT_ROLE_PERMISSIONS.employee).not.toContain("audit.view");
   });
 

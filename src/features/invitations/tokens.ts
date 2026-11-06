@@ -13,7 +13,7 @@ export function generateInviteToken(): { raw: string; hash: string } {
 
 // Kept in one small function so a validated env module can replace it later.
 function appUrl(): string {
-  const value = process.env.APP_URL;
+  const value = process.env.APP_URL?.trim();
   if (!value) {
     throw new Error("APP_URL is not set. Add it to .env.local to build invite links.");
   }

@@ -12,7 +12,7 @@ Sign-in uses an email one-time code (Neon Auth Email OTP). Magic link may be ena
 
 Version 1 delivers invitations as a copyable link shown to the inviter, who shares it by text or email. Delivery sits behind an `InviteDelivery` interface so automatic email can be added once a custom sender exists. This amends the original spec, which assumed an invite email.
 
-Tokens are 32 random bytes, base64url (43 characters), stored only as a SHA-256 hex hash. Invitations expire 7 days after creation and are single-use. Accepting needs a matching token hash, an invitation that is not expired, revoked or accepted, and a signed-in email equal to the invited email (case-insensitive). Re-inviting an email revokes its earlier open invitation. The first Owner invite link is printed by `npm run setup:owner`.
+Tokens are 32 random bytes, base64url (43 characters), stored only as a SHA-256 hex hash. Invitations expire 7 days after creation and are single-use. Accepting needs a matching token hash, an invitation that is not expired, revoked or accepted, and a signed-in email equal to the invited email (case-insensitive). Re-inviting an email revokes its earlier open invitation. The first Owner invite link will be printed by `npm run setup:owner`.
 
 Neon's shared mail sender is fine for getting started. Production needs the owner's own SMTP sender before real staff are invited.
 

@@ -2,6 +2,12 @@
 
 Source of truth: `src/server/auth/permissions.ts` (catalog and default matrix) and the foundation spec, section 8.
 
+## Status
+
+In place: the catalog, the frozen default matrix, scopes (`hasPermission`, `allowedLocationIds`), the guardrail functions `assertCanGrant`, `assertCanInviteWithRole` and `assertNotSelf`, and permission-filtered navigation in `src/server/nav.ts`.
+
+Planned, not built yet: loading permissions from the database (through `isPermission`), the last-Owner rule, audit log writes, the staff and role services, and `npm run setup:owner`. Sections below mark each item.
+
 ## Catalog
 
 | Key | Meaning |
@@ -17,7 +23,7 @@ Source of truth: `src/server/auth/permissions.ts` (catalog and default matrix) a
 | `locations.manage` | Create and change locations. |
 | `audit.view` | Read the audit log. |
 
-The catalog is a typed list in code. The database stores which roles hold which keys. Unknown keys read from the database are dropped by `isPermission`.
+The catalog is a typed list in code (in place). The database will store which roles hold which keys (planned); unknown keys read from it will be dropped by `isPermission` (planned).
 
 ## Role matrix
 
@@ -34,7 +40,7 @@ The catalog is a typed list in code. The database stores which roles hold which 
 | `locations.manage` | yes | | |
 | `audit.view` | yes | | |
 
-`DEFAULT_ROLE_PERMISSIONS` holds this matrix. It is frozen. The setup command copies it into the database; after that, the database is what counts.
+`DEFAULT_ROLE_PERMISSIONS` holds this matrix. It is frozen. The setup command (`npm run setup:owner`, planned) will copy it into the database; after that, the database is what counts.
 
 ## Scopes
 
@@ -56,14 +62,14 @@ Examples:
 
 ## Guardrails
 
-Implemented in `src/server/auth/guardrails.ts` and the staff and role services.
+Status is marked per rule. The functions live in `src/server/auth/guardrails.ts`.
 
-- **No escalation.** An actor can grant only a role whose permissions they all hold at that scope. Inviting into a role that includes `staff.invite` also needs `staff.manage` at that scope, so Managers can invite Employees only.
-- **Last Owner.** The last active, organization-wide Owner cannot be revoked, suspended or marked as left.
-- **No self-change.** An actor cannot change their own role assignments or status.
-- **Audit.** Invitations (created, accepted, revoked, expired on use), role grants and revokes, employee status changes, role permission changes, location changes and setup runs each write an audit entry in the same transaction as the change.
+- **No escalation (in place).** An actor can grant only a role whose permissions they all hold at that scope. Inviting into a role that includes `staff.invite` also needs `staff.manage` at that scope, so Managers can invite Employees only.
+- **Last Owner (planned).** The last active, organization-wide Owner cannot be revoked, suspended or marked as left.
+- **No self-change (in place, `assertNotSelf`).** An actor cannot change their own role assignments or status.
+- **Audit (planned).** Invitations (created, accepted, revoked, expired on use), role grants and revokes, employee status changes, role permission changes, location changes and setup runs each write an audit entry in the same transaction as the change.
 
-`assertCanGrant` and `assertCanInviteWithRole` are not gates by themselves. Call `requirePermission("staff.manage" | "staff.invite", scope)` first.
+`assertCanGrant` and `assertCanInviteWithRole` are not gates by themselves. Call `requirePermission("staff.manage" | "staff.invite", scope)` first (`requirePermission` is planned).
 
 ## Adding a permission
 
