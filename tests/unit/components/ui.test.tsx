@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   Badge,
   Banner,
@@ -143,42 +143,69 @@ describe("Banner", () => {
 });
 
 describe("Dialog", () => {
-  it("opens with showModal, is labelled by its title, and closes via onClose", () => {
-    const showModal = vi.fn(function (this: HTMLDialogElement) {
-      this.setAttribute("open", "");
-    });
-    const close = vi.fn(function (this: HTMLDialogElement) {
-      this.removeAttribute("open");
-      this.dispatchEvent(new Event("close"));
-    });
+  const showModal = vi.fn(function (this: HTMLDialogElement) {
+    this.setAttribute("open", "");
+  });
+  const close = vi.fn(function (this: HTMLDialogElement) {
+    this.removeAttribute("open");
+    this.dispatchEvent(new Event("close"));
+  });
+  const originalShowModal = HTMLDialogElement.prototype.showModal;
+  const originalClose = HTMLDialogElement.prototype.close;
+
+  beforeEach(() => {
+    showModal.mockClear();
+    close.mockClear();
     HTMLDialogElement.prototype.showModal = showModal;
     HTMLDialogElement.prototype.close = close;
-    const onClose = vi.fn();
+  });
 
+  afterEach(() => {
+    HTMLDialogElement.prototype.showModal = originalShowModal;
+    HTMLDialogElement.prototype.close = originalClose;
+  });
+
+  it("opens with showModal and is labelled by its title", () => {
     const { rerender } = render(
-      <Dialog open={false} onClose={onClose} title="Confirm">
+      <Dialog open={false} onClose={vi.fn()} title="Confirm">
         Are you sure?
       </Dialog>,
     );
     expect(showModal).not.toHaveBeenCalled();
-
     rerender(
-      <Dialog open onClose={onClose} title="Confirm">
+      <Dialog open onClose={vi.fn()} title="Confirm">
         Are you sure?
       </Dialog>,
     );
     expect(showModal).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("dialog", { name: "Confirm" })).toBeInTheDocument();
+  });
 
-    fireEvent(screen.getByRole("dialog", { name: "Confirm" }), new Event("close"));
-    expect(onClose).toHaveBeenCalledTimes(1);
-
+  it("does not call onClose when the parent closes it", () => {
+    const onClose = vi.fn();
+    const { rerender } = render(
+      <Dialog open onClose={onClose} title="Confirm">
+        x
+      </Dialog>,
+    );
     rerender(
       <Dialog open={false} onClose={onClose} title="Confirm">
-        Are you sure?
+        x
       </Dialog>,
     );
     expect(close).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("calls onClose once on a user-initiated close", () => {
+    const onClose = vi.fn();
+    render(
+      <Dialog open onClose={onClose} title="Confirm">
+        x
+      </Dialog>,
+    );
+    fireEvent(screen.getByRole("dialog", { name: "Confirm" }), new Event("close"));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
 

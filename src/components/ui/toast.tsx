@@ -52,7 +52,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <p
             key={item.id}
             className={cn(
-              "rounded-md border-l-4 bg-surface px-4 py-3 text-base text-fg shadow-lg",
+              "rounded-md border bg-surface px-4 py-3 text-base text-fg shadow-lg",
               tones[item.tone],
             )}
           >
