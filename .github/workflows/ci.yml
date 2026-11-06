@@ -5,11 +5,12 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
-    env:
-      TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,6 +21,13 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:unit
+      - name: Detect integration database secret
+        id: integration
+        env:
+          HAS_SECRET: ${{ secrets.TEST_DATABASE_URL != '' }}
+        run: echo "enabled=$HAS_SECRET" >> "$GITHUB_OUTPUT"
       - name: Integration tests
-        if: ${{ env.TEST_DATABASE_URL != '' }}
+        if: steps.integration.outputs.enabled == 'true'
+        env:
+          TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
         run: npm run test:integration

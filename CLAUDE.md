@@ -19,7 +19,7 @@ Stack: Next.js 16 (App Router, `src/`), TypeScript, Tailwind CSS 4, Drizzle on N
 ```
 .github/workflows/ci.yml           typecheck, lint, unit+integration tests
 drizzle.config.ts                  drizzle-kit config (schema + migrations paths)
-next.config.ts, tsconfig.json, eslint.config.mjs, vitest.config.ts, playwright.config.ts
+next.config.ts, tsconfig.json, eslint.config.mjs, vitest.config.mts, playwright.config.ts
 proxy.ts                           Neon Auth middleware (route protection)
 public/manifest.webmanifest, public/sw.js, public/icons/*
 scripts/setup-owner.ts             one-time bootstrap
