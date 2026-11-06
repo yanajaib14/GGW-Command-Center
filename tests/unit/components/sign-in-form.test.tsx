@@ -105,6 +105,10 @@ describe("SignInForm", () => {
     "/\t/evil.com",
     "/\n/evil.com",
     "/\r/evil.com",
+    "/..//evil.com",
+    "/.//evil.com",
+    "/a/..//evil.com",
+    "/%2e%2e//evil.com",
   ])("rejects an unsafe redirectTo %j", async (bad) => {
     render(<SignInForm redirectTo={bad} />);
     await submitEmail("a@b.com");

@@ -13,7 +13,7 @@ function safeRedirect(value: string | undefined): string {
   if (!value || /[\u0000-\u001f\u007f\\]/.test(value)) return "/";
   try {
     const url = new URL(value, BASE);
-    if (url.origin !== BASE) return "/";
+    if (url.origin !== BASE || url.pathname.startsWith("//")) return "/";
     return url.pathname + url.search + url.hash;
   } catch {
     return "/";
