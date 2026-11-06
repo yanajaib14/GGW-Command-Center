@@ -6,7 +6,13 @@ function scopeFor(locationId: string | null): Scope {
   return locationId === null ? "organization" : { locationId };
 }
 
-/** No escalation: every permission in the role must be held at that scope. */
+/**
+ * No escalation: every permission in the role must be held at that scope.
+ *
+ * Not an authorization gate on its own. Callers must first call
+ * `requirePermission("staff.manage", scope)` (role changes) or
+ * `requirePermission("staff.invite", scope)` (invitations).
+ */
 export function assertCanGrant(
   actor: Actor,
   rolePermissions: readonly Permission[],
@@ -20,7 +26,12 @@ export function assertCanGrant(
   }
 }
 
-/** Managers can invite Employees only: roles that can invite need staff.manage. */
+/**
+ * Managers can invite Employees only: roles that can invite need staff.manage.
+ *
+ * Not an authorization gate on its own. Callers must first call
+ * `requirePermission("staff.invite", scope)`.
+ */
 export function assertCanInviteWithRole(
   actor: Actor,
   rolePermissions: readonly Permission[],

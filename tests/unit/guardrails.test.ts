@@ -6,7 +6,14 @@ import {
   assertCanInviteWithRole,
   assertNotSelf,
 } from "@/server/auth/guardrails";
-import { Forbidden } from "@/server/auth/errors";
+import {
+  AppError,
+  Conflict,
+  Forbidden,
+  Invalid,
+  NotFound,
+  Unauthenticated,
+} from "@/server/auth/errors";
 
 const L1 = "00000000-0000-4000-8000-0000000000a1";
 const L2 = "00000000-0000-4000-8000-0000000000a2";
@@ -83,6 +90,33 @@ describe("assertCanInviteWithRole", () => {
       assertCanInviteWithRole(owner, DEFAULT_ROLE_PERMISSIONS.manager, L1),
     ).not.toThrow();
   });
+
+  it("custom role with staff.invite and staff.manage at L1 can invite a manager at L1 only", () => {
+    const actor: Actor = {
+      employeeId: "emp-2",
+      organizationId: "org-1",
+      email: "b@example.com",
+      displayName: "B",
+      assignments: [
+        {
+          assignmentId: "a-custom",
+          roleId: "r-custom",
+          roleKey: "custom",
+          locationId: L1,
+          permissions: [
+            ...DEFAULT_ROLE_PERMISSIONS.manager,
+            "staff.manage",
+          ],
+        },
+      ],
+    };
+    expect(() =>
+      assertCanInviteWithRole(actor, DEFAULT_ROLE_PERMISSIONS.manager, L1),
+    ).not.toThrow();
+    expect(() =>
+      assertCanInviteWithRole(actor, DEFAULT_ROLE_PERMISSIONS.manager, L2),
+    ).toThrow(Forbidden);
+  });
 });
 
 describe("assertNotSelf", () => {
@@ -92,5 +126,25 @@ describe("assertNotSelf", () => {
 
   it("can act on someone else", () => {
     expect(() => assertNotSelf(manager, "someone-else")).not.toThrow();
+  });
+});
+
+describe("error classes", () => {
+  const cases = [
+    ["Unauthenticated", Unauthenticated, "UNAUTHENTICATED"],
+    ["Forbidden", Forbidden, "FORBIDDEN"],
+    ["NotFound", NotFound, "NOT_FOUND"],
+    ["Conflict", Conflict, "CONFLICT"],
+    ["Invalid", Invalid, "INVALID"],
+  ] as const;
+
+  it.each(cases)("%s has the right code and name", (name, Cls, code) => {
+    const error = new Cls();
+    expect(error).toBeInstanceOf(AppError);
+    expect(error).toBeInstanceOf(Cls);
+    expect(error).toBeInstanceOf(Error);
+    expect(error.code).toBe(code);
+    expect(error.name).toBe(name);
+    expect(error.message.length).toBeGreaterThan(0);
   });
 });

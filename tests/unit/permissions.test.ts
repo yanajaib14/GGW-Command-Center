@@ -75,6 +75,22 @@ describe("permission catalog", () => {
     expect(count).toBe(30);
   });
 
+  it("default matrix is frozen", () => {
+    "use strict";
+    const matrix = DEFAULT_ROLE_PERMISSIONS as unknown as Record<
+      string,
+      string[]
+    >;
+    expect(Object.isFrozen(matrix)).toBe(true);
+    expect(() => {
+      matrix.owner = [];
+    }).toThrow(TypeError);
+    expect(() => {
+      matrix.employee?.push("audit.view");
+    }).toThrow(TypeError);
+    expect(DEFAULT_ROLE_PERMISSIONS.employee).not.toContain("audit.view");
+  });
+
   it("isPermission rejects unknown keys", () => {
     expect(isPermission("staff.delete")).toBe(false);
     expect(isPermission("staff.view")).toBe(true);
@@ -122,6 +138,22 @@ describe("allowedLocationIds", () => {
       makeAssignment("manager", L2),
     ]);
     expect(allowedLocationIds(actor, "staff.view")).toEqual([L1, L2]);
+  });
+
+  it("returns all when org-wide and location holders are mixed", () => {
+    const actor = makeActor([
+      makeAssignment("manager", L1),
+      makeAssignment("owner", null),
+    ]);
+    expect(allowedLocationIds(actor, "staff.view")).toBe("all");
+  });
+
+  it("de-duplicates repeated locations", () => {
+    const actor = makeActor([
+      makeAssignment("manager", L1),
+      makeAssignment("manager", L1),
+    ]);
+    expect(allowedLocationIds(actor, "staff.view")).toEqual([L1]);
   });
 
   it("returns empty when the permission is not held", () => {

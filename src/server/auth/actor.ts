@@ -9,6 +9,12 @@ export type ActorAssignment = {
   permissions: readonly Permission[];
 };
 
+/**
+ * The signed-in employee and their access. The loader guarantees only that the
+ * employee is active, assignments are unrevoked and at active locations, and
+ * every permission has passed through `isPermission`. Authorization still
+ * needs `hasPermission` or `requirePermission` for the action and scope.
+ */
 export type Actor = {
   employeeId: string;
   organizationId: string;
