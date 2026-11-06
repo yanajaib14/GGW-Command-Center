@@ -16,6 +16,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    server: { deps: { inline: ["@neon/auth"] } },
     include: ["tests/integration/**/*.test.ts"],
     setupFiles: ["./tests/helpers/integration-setup.ts"],
     globalSetup: ["./tests/helpers/global-setup.ts"],

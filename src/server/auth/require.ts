@@ -40,6 +40,12 @@ export async function requireActor(deps: GateDeps = {}): Promise<Actor> {
  *
  * Throws `Unauthenticated` (no session) or `Forbidden` (not an active
  * employee, or no assignment grants `p` in `scope`). Returns the actor.
+ *
+ * Scope caveat: a `{ locationId }` scope only says "the actor holds `p` at
+ * (or above) that id". Callers passing a `locationId` that came from user
+ * input must first resolve that location within `actor.organizationId`;
+ * org-wide holders pass `hasPermission` for any id, including one that
+ * belongs to another organization.
  */
 export async function requirePermission(
   p: Permission,

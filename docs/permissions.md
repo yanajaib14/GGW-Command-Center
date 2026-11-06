@@ -54,6 +54,7 @@ A role assignment is either organization-wide (no location) or tied to one locat
 
 Examples:
 
+- Callers passing `{ locationId }` must first resolve that location within `actor.organizationId`. An organization-wide holder passes `hasPermission` for any id, so an unchecked id from another organization would pass the gate.
 - A Manager at location A passes `staff.view` for `{ locationId: A }`. It fails for `{ locationId: B }` and for `"organization"`. It passes for `"any"`.
 - An Owner with an organization-wide assignment passes every scope.
 - An actor who is Employee at A and Manager at B has the union: `staff.invite` at B only.

@@ -40,6 +40,17 @@ describe("loadActor", () => {
     expect(await loadActor(testDb(), userFor("unknown-user"))).toBeNull();
   });
 
+  it("does not load by email alone", async () => {
+    await seedEmployee({
+      orgId: org.orgId,
+      email: "someone@example.test",
+      authUserId: "other-auth-user",
+      assignments: [{ roleId: org.roles.owner, locationId: null }],
+    });
+    // Same email as the session, different auth user id: must not match.
+    expect(await loadActor(testDb(), userFor("session-auth-user"))).toBeNull();
+  });
+
   it("returns null for suspended and left employees", async () => {
     for (const status of ["suspended", "left", "invited"] as const) {
       const authUserId = `user-${status}`;

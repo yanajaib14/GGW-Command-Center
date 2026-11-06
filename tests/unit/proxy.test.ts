@@ -1,3 +1,4 @@
+import { DEFAULT_AUTH_SKIP_ROUTES, shouldProtectRoute } from "@neon/auth/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { config, LOGIN_URL, PUBLIC_ROUTES } from "@/proxy";
 
@@ -34,5 +35,15 @@ describe("proxy", () => {
     expect(config.matcher).toEqual([
       "/((?!_next/static|_next/image|favicon.ico).*)",
     ]);
+  });
+
+  it("matches routes through the package matcher", () => {
+    const skip = [...DEFAULT_AUTH_SKIP_ROUTES, ...PUBLIC_ROUTES];
+    expect(shouldProtectRoute("/invite/abc", skip)).toBe(false);
+    expect(shouldProtectRoute("/sign-in", skip)).toBe(false);
+    expect(shouldProtectRoute("/icons/icon-192.png", skip)).toBe(false);
+    expect(shouldProtectRoute("/invitex", skip)).toBe(true);
+    expect(shouldProtectRoute("/no-access", skip)).toBe(true);
+    expect(shouldProtectRoute("/", skip)).toBe(true);
   });
 });
