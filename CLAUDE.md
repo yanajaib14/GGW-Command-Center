@@ -91,8 +91,8 @@ Working rules:
 ## Docs to update when architecture changes
 
 - `docs/architecture.md`: layers, data flow, folder responsibilities
-- `docs/permissions.md`: permission catalog and role matrix
-- `docs/decisions/`: add a numbered decision record for any significant choice
+- [`docs/permissions.md`](docs/permissions.md): permission catalog, role matrix, scopes, guardrails
+- [`docs/decisions/`](docs/decisions/): add a numbered decision record for any significant choice
 - `CLAUDE.md` (this file) and `.env.example` when commands, structure or environment variables change
 
 Design and plan documents live in `docs/superpowers/`.
