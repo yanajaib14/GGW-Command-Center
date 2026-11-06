@@ -10,7 +10,7 @@ Stack: Next.js 16 (App Router, `src/`), TypeScript, Tailwind CSS 4, Drizzle on N
 - `npm run typecheck`: `tsc --noEmit`
 - `npm run lint`: `eslint .`
 - `npm run test:unit`: `vitest run tests/unit`
-- `npm run test:integration`: `vitest run tests/integration` (needs `TEST_DATABASE_URL`)
+- `npm run test:integration`: `vitest run tests/integration --passWithNoTests` (needs `TEST_DATABASE_URL`)
 - `npm run test:e2e`: `playwright test`
 - `npm run check`: typecheck, lint and unit tests; must pass before every commit
 

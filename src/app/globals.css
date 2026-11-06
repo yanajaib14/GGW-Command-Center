@@ -1,26 +1,92 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens. Runtime colour variables switch with the colour scheme:
+ * dark follows the OS unless <html data-theme="light"> is set, and
+ * <html data-theme="dark"> forces dark. Text/background pairs meet WCAG AA
+ * (4.5:1) in both themes.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --c-bg: #f6f8f4;
+  --c-surface: #ffffff;
+  --c-fg: #1a1f1b;
+  --c-muted: #566058;
+  --c-line: #d3dad2;
+  --c-accent: #2f6b3a;
+  --c-accent-fg: #ffffff;
+  --c-success: #1f6b32;
+  --c-warning: #7a4a00;
+  --c-danger: #b3261e;
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-theme="light"]) {
+    --c-bg: #0f1410;
+    --c-surface: #171d18;
+    --c-fg: #edf2ed;
+    --c-muted: #a4afa6;
+    --c-line: #2d362f;
+    --c-accent: #8cc795;
+    --c-accent-fg: #0c1a0f;
+    --c-success: #7fd08f;
+    --c-warning: #f0b44c;
+    --c-danger: #ff8f85;
+    color-scheme: dark;
   }
 }
 
+:root[data-theme="dark"] {
+  --c-bg: #0f1410;
+  --c-surface: #171d18;
+  --c-fg: #edf2ed;
+  --c-muted: #a4afa6;
+  --c-line: #2d362f;
+  --c-accent: #8cc795;
+  --c-accent-fg: #0c1a0f;
+  --c-success: #7fd08f;
+  --c-warning: #f0b44c;
+  --c-danger: #ff8f85;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-fg: var(--c-fg);
+  --color-muted: var(--c-muted);
+  --color-line: var(--c-line);
+  --color-accent: var(--c-accent);
+  --color-accent-fg: var(--c-accent-fg);
+  --color-success: var(--c-success);
+  --color-warning: var(--c-warning);
+  --color-danger: var(--c-danger);
+
+  --font-sans:
+    var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@theme {
+  /* 4 px spacing scale: p-1 = 4px, p-3 = 12px, p-12 = 48px. */
+  --spacing: 4px;
+  --spacing-touch: 48px;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  --text-sm: 15px;
+  --text-base: 17px;
+  --text-lg: 20px;
+  --text-xl: 24px;
+  --text-2xl: 30px;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
 }
