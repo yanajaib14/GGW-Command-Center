@@ -129,8 +129,10 @@ lower-case), `phone` (nullable), `status` (`invited` | `active` | `suspended`
 renamed), timestamps.
 
 **role_permissions**
-`role_id`, `permission` (text; must be a key in the code permission catalog),
-`organization_id`, `created_at`. Primary key (`role_id`, `permission`).
+`id`, `role_id`, `permission` (text; must be a key in the code permission catalog),
+`organization_id`, `created_at`, `revoked_at` (nullable), `revoked_by_employee_id`
+(nullable). A permission is granted while `revoked_at` is null; at most one active
+row per (`role_id`, `permission`). Rows are revoked, never deleted.
 
 **role_assignments**
 `id`, `organization_id`, `employee_id`, `role_id`, `location_id` (nullable;

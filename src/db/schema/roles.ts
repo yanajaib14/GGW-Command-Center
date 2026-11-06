@@ -1,10 +1,12 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
+  foreignKey,
   pgTable,
-  primaryKey,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -26,15 +28,18 @@ export const roles = pgTable(
     isSystem: boolean("is_system").notNull().default(false),
     ...timestamps(),
   },
-  (t) => [uniqueIndex("roles_org_key_unique").on(t.organizationId, t.key)],
+  (t) => [
+    // Target for composite (id, organization_id) foreign keys.
+    unique("roles_id_org_unique").on(t.id, t.organizationId),
+    uniqueIndex("roles_org_key_unique").on(t.organizationId, t.key),
+  ],
 );
 
 export const rolePermissions = pgTable(
   "role_permissions",
   {
-    roleId: uuid("role_id")
-      .notNull()
-      .references(() => roles.id),
+    id: id(),
+    roleId: uuid("role_id").notNull(),
     permission: text("permission").notNull(),
     organizationId: uuid("organization_id")
       .notNull()
@@ -42,8 +47,25 @@ export const rolePermissions = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    revokedByEmployeeId: uuid("revoked_by_employee_id").references(
+      () => employees.id,
+    ),
   },
-  (t) => [primaryKey({ columns: [t.roleId, t.permission] })],
+  (t) => [
+    foreignKey({
+      name: "role_permissions_role_org_fk",
+      columns: [t.roleId, t.organizationId],
+      foreignColumns: [roles.id, roles.organizationId],
+    }),
+    uniqueIndex("role_permissions_active_unique")
+      .on(t.roleId, t.permission)
+      .where(sql`${t.revokedAt} is null`),
+    check(
+      "role_permissions_revoked_by_needs_revoked_at",
+      sql`${t.revokedByEmployeeId} is null or ${t.revokedAt} is not null`,
+    ),
+  ],
 );
 
 export const roleAssignments = pgTable(
@@ -53,14 +75,10 @@ export const roleAssignments = pgTable(
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => organizations.id),
-    employeeId: uuid("employee_id")
-      .notNull()
-      .references(() => employees.id),
-    roleId: uuid("role_id")
-      .notNull()
-      .references(() => roles.id),
+    employeeId: uuid("employee_id").notNull(),
+    roleId: uuid("role_id").notNull(),
     /** Null means all locations in the organization. */
-    locationId: uuid("location_id").references(() => locations.id),
+    locationId: uuid("location_id"),
     grantedByEmployeeId: uuid("granted_by_employee_id").references(
       () => employees.id,
     ),
@@ -74,6 +92,27 @@ export const roleAssignments = pgTable(
     ...timestamps(),
   },
   (t) => [
+    // Composite FKs keep every reference inside the same organization. A NULL
+    // location_id (org-wide) is not checked by the location FK, by design.
+    foreignKey({
+      name: "role_assignments_employee_org_fk",
+      columns: [t.employeeId, t.organizationId],
+      foreignColumns: [employees.id, employees.organizationId],
+    }),
+    foreignKey({
+      name: "role_assignments_role_org_fk",
+      columns: [t.roleId, t.organizationId],
+      foreignColumns: [roles.id, roles.organizationId],
+    }),
+    foreignKey({
+      name: "role_assignments_location_org_fk",
+      columns: [t.locationId, t.organizationId],
+      foreignColumns: [locations.id, locations.organizationId],
+    }),
+    check(
+      "role_assignments_revoked_by_needs_revoked_at",
+      sql`${t.revokedByEmployeeId} is null or ${t.revokedAt} is not null`,
+    ),
     // At most one active assignment per (employee, role, location); null
     // location (all locations) is folded to the nil UUID so it is also unique.
     uniqueIndex("role_assignments_active_unique")

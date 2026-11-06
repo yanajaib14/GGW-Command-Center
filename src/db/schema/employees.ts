@@ -1,8 +1,10 @@
 import { sql } from "drizzle-orm";
 import {
+  check,
   pgEnum,
   pgTable,
   text,
+  unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -28,12 +30,16 @@ export const employees = pgTable(
     firstName: text("first_name").notNull(),
     lastName: text("last_name").notNull(),
     displayName: text("display_name").notNull(),
+    /** Stored lower-case (enforced by CHECK). */
     email: text("email").notNull(),
     phone: text("phone"),
     status: employeeStatus("status").notNull().default("invited"),
     ...timestamps(),
   },
   (t) => [
+    // Target for composite (id, organization_id) foreign keys.
+    unique("employees_id_org_unique").on(t.id, t.organizationId),
+    check("employees_email_lower", sql`${t.email} = lower(${t.email})`),
     uniqueIndex("employees_org_email_unique").on(
       t.organizationId,
       sql`lower(${t.email})`,

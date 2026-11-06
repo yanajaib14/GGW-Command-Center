@@ -3,24 +3,29 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { auditLog, employees, roleAssignments } from "@/db/schema";
 import { resetDb, seedOrg, testDb, type SeededOrg } from "../helpers/db";
 
-/** Walk the error cause chain (drivers/ORMs wrap the Postgres error). */
-async function rejection(p: Promise<unknown>): Promise<string> {
+type Rejection = { code?: string; constraint?: string; text: string };
+
+/** Walk the error cause chain (Drizzle wraps the Postgres error). */
+async function rejection(p: Promise<unknown>): Promise<Rejection> {
   try {
     await p;
   } catch (e) {
-    const parts: string[] = [];
+    const out: Rejection = { text: "" };
     let cur: unknown = e;
     while (cur instanceof Error) {
-      const code = (cur as { code?: string }).code;
-      parts.push(`${code ?? ""} ${cur.message}`);
+      const pg = cur as { code?: string; constraint?: string };
+      out.code ??= pg.code;
+      out.constraint ??= pg.constraint;
+      out.text += ` ${cur.message}`;
       cur = cur.cause;
     }
-    return parts.join(" | ");
+    return out;
   }
   throw new Error("expected the statement to reject, but it succeeded");
 }
 
 const UNIQUE_VIOLATION = "23505";
+const CHECK_VIOLATION = "23514";
 
 let seed: SeededOrg;
 
@@ -45,10 +50,17 @@ beforeEach(async () => {
 });
 
 describe("schema constraints", () => {
-  it("employee email is unique per organization ignoring case", async () => {
-    await newEmployee("Som@x.com");
-    const msg = await rejection(newEmployee("som@x.com"));
-    expect(msg).toContain(UNIQUE_VIOLATION);
+  it("employee email is unique per organization", async () => {
+    await newEmployee("som@x.com");
+    const r = await rejection(newEmployee("som@x.com"));
+    expect(r.code).toBe(UNIQUE_VIOLATION);
+    expect(r.constraint).toBe("employees_org_email_unique");
+  });
+
+  it("employee email must be stored lower-case", async () => {
+    const r = await rejection(newEmployee("Som@x.com"));
+    expect(r.code).toBe(CHECK_VIOLATION);
+    expect(r.constraint).toBe("employees_email_lower");
   });
 
   it("one active assignment per employee, role and location", async () => {
@@ -66,9 +78,9 @@ describe("schema constraints", () => {
       .returning({ id: roleAssignments.id });
     if (!first) throw new Error("assignment insert returned no row");
 
-    expect(await rejection(db.insert(roleAssignments).values(values))).toContain(
-      UNIQUE_VIOLATION,
-    );
+    const r = await rejection(db.insert(roleAssignments).values(values));
+    expect(r.code).toBe(UNIQUE_VIOLATION);
+    expect(r.constraint).toBe("role_assignments_active_unique");
 
     await db
       .update(roleAssignments)
@@ -89,9 +101,9 @@ describe("schema constraints", () => {
       locationId: null,
     };
     await db.insert(roleAssignments).values(values);
-    expect(await rejection(db.insert(roleAssignments).values(values))).toContain(
-      UNIQUE_VIOLATION,
-    );
+    const r = await rejection(db.insert(roleAssignments).values(values));
+    expect(r.code).toBe(UNIQUE_VIOLATION);
+    expect(r.constraint).toBe("role_assignments_active_unique");
   });
 
   it("audit_log rejects update and delete", async () => {
@@ -101,11 +113,15 @@ describe("schema constraints", () => {
       action: "test.created",
       entityType: "test",
     });
-    expect(
-      await rejection(db.execute(sql`UPDATE audit_log SET action = 'x'`)),
-    ).toContain("audit_log is append-only");
-    expect(await rejection(db.execute(sql`DELETE FROM audit_log`))).toContain(
-      "audit_log is append-only",
+    const upd = await rejection(
+      db.execute(sql`UPDATE audit_log SET action = 'x'`),
     );
+    expect(upd.text).toContain("audit_log is append-only");
+    const del = await rejection(db.execute(sql`DELETE FROM audit_log`));
+    expect(del.text).toContain("audit_log is append-only");
+
+    const rows = await db.select().from(auditLog);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.action).toBe("test.created");
   });
 });

@@ -11,7 +11,7 @@ Stack: Next.js 16 (App Router, `src/`), TypeScript, Tailwind CSS 4, Drizzle on N
 - `npm run lint`: `eslint .`
 - `npm run test:unit`: `vitest run tests/unit`
 - `npm run test:integration`: Vitest with `vitest.integration.config.mts` (needs `TEST_DATABASE_URL`; globalSetup migrates the test branch)
-- `npm run db:generate` / `db:migrate`: drizzle-kit generate / apply migrations (`DATABASE_URL`)
+- `npm run db:generate` / `db:migrate`: drizzle-kit generate / apply migrations (`DATABASE_URL`; run migrations with the direct, non-pooler Neon URL)
 - `npm run test:e2e`: `playwright test`
 - `npm run check`: typecheck, lint and unit tests; must pass before every commit
 
