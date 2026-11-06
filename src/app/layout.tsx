@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "GGW Command Center",
   description: "Restaurant operations, mobile first",
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({
