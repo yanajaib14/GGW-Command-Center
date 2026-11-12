@@ -14,7 +14,8 @@
     "test:e2e": "playwright test",
     "check": "npm run typecheck && npm run lint && npm run test:unit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "setup:owner": "tsx --conditions=react-server scripts/setup-owner.ts --org \"Glai Gung Won\" --slug ggw"
   },
   "dependencies": {
     "@neon/auth": "^0.8.2",
@@ -39,6 +40,7 @@
     "eslint-config-next": "16.4.5",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.1.0"
   }
