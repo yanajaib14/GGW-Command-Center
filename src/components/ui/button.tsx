@@ -12,10 +12,10 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-accent text-accent-fg",
-  secondary: "bg-surface text-fg border border-line",
-  danger: "bg-danger text-accent-fg",
-  ghost: "bg-transparent text-accent",
+  primary: "bg-accent text-accent-fg hover:opacity-85 active:opacity-70",
+  secondary: "bg-fg/[0.08] text-fg hover:bg-fg/[0.12] active:bg-fg/[0.16]",
+  danger: "bg-danger text-accent-fg hover:opacity-85 active:opacity-70",
+  ghost: "bg-transparent text-fg hover:bg-fg/[0.06] active:bg-fg/[0.1]",
 };
 
 const sizes: Record<ButtonSize, string> = {
@@ -40,7 +40,7 @@ export function Button({
       disabled={disabled || loading}
       aria-busy={loading ? "true" : undefined}
       className={cn(
-        "inline-flex min-w-touch items-center justify-center gap-2 rounded-md font-medium",
+        "inline-flex min-w-touch items-center justify-center gap-2 rounded-md font-semibold transition-[background-color,opacity] duration-150 ease-out",
         "disabled:cursor-not-allowed disabled:opacity-60",
         focusRing,
         variants[variant],

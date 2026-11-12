@@ -38,9 +38,9 @@ export function Dialog({ open, onClose, title, children }: DialogProps) {
         }
         onClose();
       }}
-      className="m-auto max-h-dvh w-full max-w-md overflow-y-auto rounded-lg border border-line bg-surface p-4 text-fg backdrop:bg-fg/50"
+      className="m-auto max-h-dvh w-full max-w-md overflow-y-auto rounded-lg bg-surface p-5 text-fg shadow-soft backdrop:bg-black/40 backdrop:backdrop-blur-sm max-md:mb-0 max-md:max-w-none max-md:rounded-b-none max-md:pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
     >
-      <h2 id={titleId} className="mb-3 text-lg font-semibold">
+      <h2 id={titleId} className="mb-3 text-lg font-semibold tracking-tight">
         {title}
       </h2>
       {children}

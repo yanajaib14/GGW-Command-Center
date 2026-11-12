@@ -22,7 +22,7 @@ export function AppShell({
     <div className="flex min-h-dvh flex-col md:flex-row">
       <NavBar items={items} />
       <div className="flex min-w-0 flex-1 flex-col pb-24 md:pb-0">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface px-4 py-2">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface/80 px-4 py-2 backdrop-blur-xl">
           <span className="text-sm text-muted">{actor.displayName}</span>
           {experiences.length > 1 ? (
             <ExperienceSwitcher experiences={experiences} current={experience} />

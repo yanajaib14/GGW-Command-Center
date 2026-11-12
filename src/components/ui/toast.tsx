@@ -21,11 +21,39 @@ const ToastContext = createContext<ToastApi | null>(null);
 
 const DISMISS_MS = 4000;
 
-const tones: Record<ToastTone, string> = {
-  info: "border-accent",
-  success: "border-success",
-  danger: "border-danger",
+const iconColour: Record<ToastTone, string> = {
+  info: "text-muted",
+  success: "text-success",
+  danger: "text-danger",
 };
+
+/** Distinct glyph per tone so status never relies on colour alone. */
+function ToneIcon({ tone }: { tone: ToastTone }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+      className={cn("shrink-0", iconColour[tone])}
+    >
+      <circle cx="12" cy="12" r="9" />
+      {tone === "success" ? (
+        <path d="M8 12.5l2.7 2.7L16 9.5" />
+      ) : tone === "danger" ? (
+        <path d="M9 9l6 6M15 9l-6 6" />
+      ) : (
+        <path d="M12 11v5M12 8h.01" />
+      )}
+    </svg>
+  );
+}
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
@@ -51,11 +79,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {items.map((item) => (
           <p
             key={item.id}
-            className={cn(
-              "rounded-md border bg-surface px-4 py-3 text-base text-fg shadow-lg",
-              tones[item.tone],
-            )}
+            className="flex max-w-md items-center gap-3 rounded-lg border border-line bg-surface px-4 py-3 text-base text-fg shadow-soft"
           >
+            <ToneIcon tone={item.tone} />
             {item.message}
           </p>
         ))}

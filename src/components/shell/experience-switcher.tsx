@@ -17,18 +17,18 @@ export function ExperienceSwitcher({
   current: Experience;
 }) {
   return (
-    <nav aria-label="Experience" className="flex gap-1">
+    <nav aria-label="Experience" className="flex gap-0.5 rounded-md bg-fg/[0.08] p-0.5">
       {experiences.map((e) => (
         <Link
           key={e}
           href={experiencePath(e)}
           aria-current={e === current ? "page" : undefined}
           className={cn(
-            "inline-flex min-h-touch items-center rounded-md border px-3 text-sm",
+            "inline-flex min-h-touch items-center rounded-sm px-3 text-sm font-medium transition-colors duration-150 ease-out",
             focusRing,
             e === current
-              ? "border-accent bg-accent text-accent-fg"
-              : "border-line bg-surface text-fg",
+              ? "bg-accent text-accent-fg"
+              : "text-fg hover:bg-fg/[0.06]",
           )}
         >
           {LABELS[e]}

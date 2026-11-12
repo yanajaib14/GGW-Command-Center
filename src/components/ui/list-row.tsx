@@ -11,9 +11,16 @@ export type ListRowProps = {
 };
 
 export function ListRow({ title, subtitle, trailing, href }: ListRowProps) {
+  // Hairline divider inset from the left, like an iOS grouped list; the last
+  // row in a group has none.
   const className = cn(
-    "flex min-h-touch items-center justify-between gap-3 border-b border-line px-4 py-3",
-    href && cn("hover:bg-bg", focusRing),
+    "relative flex min-h-touch items-center justify-between gap-3 px-4 py-3",
+    "after:absolute after:inset-x-0 after:bottom-0 after:left-4 after:h-px after:bg-line last:after:hidden",
+    href &&
+      cn(
+        "transition-colors duration-150 ease-out hover:bg-bg active:bg-line",
+        focusRing,
+      ),
   );
   const content = (
     <>
@@ -23,8 +30,26 @@ export function ListRow({ title, subtitle, trailing, href }: ListRowProps) {
           <span className="text-sm text-muted">{subtitle}</span>
         ) : null}
       </span>
-      {trailing ? (
-        <span className="shrink-0 text-sm text-muted">{trailing}</span>
+      {trailing || href ? (
+        <span className="flex shrink-0 items-center gap-2 text-sm text-muted">
+          {trailing}
+          {href ? (
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M9 5l7 7-7 7" />
+            </svg>
+          ) : null}
+        </span>
       ) : null}
     </>
   );

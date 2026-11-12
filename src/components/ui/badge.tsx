@@ -4,7 +4,7 @@ import { cn } from "@/lib/cn";
 export type BadgeTone = "neutral" | "success" | "warning" | "danger";
 
 const tones: Record<BadgeTone, string> = {
-  neutral: "bg-line text-fg",
+  neutral: "bg-fg/10 text-fg",
   success: "bg-success/15 text-success",
   warning: "bg-warning/15 text-warning",
   danger: "bg-danger/15 text-danger",
@@ -21,7 +21,7 @@ export function Badge({
     <span
       data-tone={tone}
       className={cn(
-        "inline-flex items-center rounded-sm px-2 py-1 text-sm font-medium",
+        "inline-flex items-center rounded-full px-3 py-1 text-sm font-medium",
         tones[tone],
       )}
     >
