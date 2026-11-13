@@ -1,10 +1,22 @@
 import "server-only";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
-import { employees, locations, roleAssignments } from "@/db/schema";
+import {
+  employees,
+  invitations,
+  locations,
+  roleAssignments,
+  roles,
+} from "@/db/schema";
+import { activePermissions } from "@/features/invitations/service";
 import { writeAudit } from "@/server/audit/write";
-import { hasPermission, type Actor } from "@/server/auth/actor";
+import {
+  allowedLocationIds,
+  hasPermission,
+  type Actor,
+} from "@/server/auth/actor";
 import { Forbidden, Invalid, NotFound } from "@/server/auth/errors";
+import { assertCanInviteWithRole } from "@/server/auth/guardrails";
 import { withTransaction, type Tx } from "@/server/db/client";
 
 export type TxRunner = <T>(fn: (tx: Tx) => Promise<T>) => Promise<T>;
@@ -137,4 +149,295 @@ export async function getHubContext(
       phone: me?.phone ?? null,
     };
   });
+}
+
+export type EmployeeStatus = "invited" | "active" | "suspended" | "left";
+
+type RoleLabel = { roleName: string; locationName: string | null };
+
+export type StaffRow = {
+  employeeId: string;
+  displayName: string;
+  email: string;
+  status: EmployeeStatus;
+  roles: RoleLabel[];
+};
+
+/**
+ * Staff the actor may see. Location isolation: a location-scoped holder of
+ * `staff.view` sees only employees with an active assignment (or an open
+ * invitation) at one of their locations, and only the roles held at those
+ * locations. Organization-wide holders see everyone in the organization.
+ */
+export async function listStaff(
+  actor: Actor,
+  opts: { locationId?: string } = {},
+  deps: StaffDeps = {},
+): Promise<StaffRow[]> {
+  if (!hasPermission(actor, "staff.view", "any")) throw new Forbidden();
+  const allowed = allowedLocationIds(actor, "staff.view");
+  if (
+    opts.locationId !== undefined &&
+    allowed !== "all" &&
+    !allowed.includes(opts.locationId)
+  ) {
+    throw new Forbidden();
+  }
+  // null = no location restriction.
+  const restrictTo: string[] | null =
+    opts.locationId !== undefined
+      ? [opts.locationId]
+      : allowed === "all"
+        ? null
+        : allowed;
+  if (restrictTo !== null && restrictTo.length === 0) return [];
+  const transaction = deps.transaction ?? withTransaction;
+
+  return transaction(async (tx) => {
+    const orgId = actor.organizationId;
+
+    const assignmentRows = await tx
+      .select({
+        employeeId: roleAssignments.employeeId,
+        roleName: roles.name,
+        locationName: locations.name,
+      })
+      .from(roleAssignments)
+      .innerJoin(
+        roles,
+        and(eq(roles.id, roleAssignments.roleId), eq(roles.organizationId, orgId)),
+      )
+      .leftJoin(
+        locations,
+        and(
+          eq(locations.id, roleAssignments.locationId),
+          eq(locations.organizationId, orgId),
+        ),
+      )
+      .where(
+        and(
+          eq(roleAssignments.organizationId, orgId),
+          isNull(roleAssignments.revokedAt),
+          restrictTo === null
+            ? undefined
+            : inArray(roleAssignments.locationId, restrictTo),
+        ),
+      )
+      .orderBy(asc(roles.name));
+
+    // An open invitation stands in for an assignment until it is accepted.
+    const inviteRows = await tx
+      .select({
+        employeeId: invitations.employeeId,
+        roleName: roles.name,
+        locationName: locations.name,
+      })
+      .from(invitations)
+      .innerJoin(
+        roles,
+        and(eq(roles.id, invitations.roleId), eq(roles.organizationId, orgId)),
+      )
+      .leftJoin(
+        locations,
+        and(
+          eq(locations.id, invitations.locationId),
+          eq(locations.organizationId, orgId),
+        ),
+      )
+      .where(
+        and(
+          eq(invitations.organizationId, orgId),
+          isNull(invitations.acceptedAt),
+          isNull(invitations.revokedAt),
+          gt(invitations.expiresAt, new Date()),
+          restrictTo === null
+            ? undefined
+            : and(
+                eq(invitations.grantsOrgWide, false),
+                inArray(invitations.locationId, restrictTo),
+              ),
+        ),
+      );
+
+    const rolesByEmployee = new Map<string, RoleLabel[]>();
+    for (const r of [...assignmentRows, ...inviteRows]) {
+      const list = rolesByEmployee.get(r.employeeId) ?? [];
+      list.push({ roleName: r.roleName, locationName: r.locationName });
+      rolesByEmployee.set(r.employeeId, list);
+    }
+
+    const everyone = restrictTo === null;
+    const ids = [...rolesByEmployee.keys()];
+    if (!everyone && ids.length === 0) return [];
+
+    const people = await tx
+      .select({
+        id: employees.id,
+        displayName: employees.displayName,
+        email: employees.email,
+        status: employees.status,
+      })
+      .from(employees)
+      .where(
+        and(
+          eq(employees.organizationId, orgId),
+          everyone ? undefined : inArray(employees.id, ids),
+        ),
+      )
+      .orderBy(asc(employees.displayName), asc(employees.email));
+
+    return people.map((p) => ({
+      employeeId: p.id,
+      displayName: p.displayName,
+      email: p.email,
+      status: p.status,
+      roles: rolesByEmployee.get(p.id) ?? [],
+    }));
+  });
+}
+
+export type PendingInvitation = {
+  invitationId: string;
+  email: string;
+  roleName: string;
+  locationName: string;
+  expiresAt: Date;
+};
+
+/**
+ * Open, unexpired invitations at the actor locations. Organization-wide
+ * invitations (Owner) are visible only to organization-wide holders.
+ */
+export async function listPendingInvitations(
+  actor: Actor,
+  deps: StaffDeps = {},
+): Promise<PendingInvitation[]> {
+  if (!hasPermission(actor, "staff.invite", "any")) throw new Forbidden();
+  const allowed = allowedLocationIds(actor, "staff.invite");
+  if (allowed !== "all" && allowed.length === 0) return [];
+  const transaction = deps.transaction ?? withTransaction;
+
+  return transaction(async (tx) => {
+    const orgId = actor.organizationId;
+    const rows = await tx
+      .select({
+        invitationId: invitations.id,
+        email: invitations.email,
+        roleName: roles.name,
+        locationName: locations.name,
+        expiresAt: invitations.expiresAt,
+      })
+      .from(invitations)
+      .innerJoin(
+        roles,
+        and(eq(roles.id, invitations.roleId), eq(roles.organizationId, orgId)),
+      )
+      .leftJoin(
+        locations,
+        and(
+          eq(locations.id, invitations.locationId),
+          eq(locations.organizationId, orgId),
+        ),
+      )
+      .where(
+        and(
+          eq(invitations.organizationId, orgId),
+          isNull(invitations.acceptedAt),
+          isNull(invitations.revokedAt),
+          gt(invitations.expiresAt, new Date()),
+          allowed === "all"
+            ? undefined
+            : and(
+                eq(invitations.grantsOrgWide, false),
+                inArray(invitations.locationId, allowed),
+              ),
+        ),
+      )
+      .orderBy(asc(invitations.expiresAt));
+    return rows.map((r) => ({
+      ...r,
+      locationName: r.locationName ?? "All locations",
+    }));
+  });
+}
+
+export type InvitableRole = { id: string; key: string; name: string };
+
+/**
+ * Roles the actor may invite someone into at `locationId`: the same checks
+ * `createInvitation` applies (staff.invite plus the no-escalation guardrail).
+ */
+export async function listInvitableRoles(
+  actor: Actor,
+  locationId: string,
+  deps: StaffDeps = {},
+): Promise<InvitableRole[]> {
+  if (!hasPermission(actor, "staff.invite", { locationId })) throw new Forbidden();
+  const transaction = deps.transaction ?? withTransaction;
+
+  return transaction(async (tx) => {
+    const orgId = actor.organizationId;
+    const [location] = await tx
+      .select({ id: locations.id })
+      .from(locations)
+      .where(
+        and(
+          eq(locations.id, locationId),
+          eq(locations.organizationId, orgId),
+          eq(locations.status, "active"),
+        ),
+      );
+    if (!location) throw new NotFound("Location not found.");
+
+    const all = await tx
+      .select({ id: roles.id, key: roles.key, name: roles.name })
+      .from(roles)
+      .where(eq(roles.organizationId, orgId))
+      .orderBy(asc(roles.name));
+
+    const result: InvitableRole[] = [];
+    for (const role of all) {
+      // Owner invitations are organization-wide, as in createInvitation.
+      const orgWide = role.key === "owner";
+      const scope = orgWide ? ("organization" as const) : { locationId };
+      if (!hasPermission(actor, "staff.invite", scope)) continue;
+      try {
+        assertCanInviteWithRole(
+          actor,
+          await activePermissions(tx, orgId, role.id),
+          orgWide ? null : locationId,
+        );
+        result.push(role);
+      } catch (error) {
+        if (!(error instanceof Forbidden)) throw error;
+      }
+    }
+    return result;
+  });
+}
+
+export type InvitableLocation = { id: string; name: string };
+
+/** Active locations where the actor holds `staff.invite`. */
+export async function listInvitableLocations(
+  actor: Actor,
+  deps: StaffDeps = {},
+): Promise<InvitableLocation[]> {
+  if (!hasPermission(actor, "staff.invite", "any")) throw new Forbidden();
+  const allowed = allowedLocationIds(actor, "staff.invite");
+  if (allowed !== "all" && allowed.length === 0) return [];
+  const transaction = deps.transaction ?? withTransaction;
+  return transaction((tx) =>
+    tx
+      .select({ id: locations.id, name: locations.name })
+      .from(locations)
+      .where(
+        and(
+          eq(locations.organizationId, actor.organizationId),
+          eq(locations.status, "active"),
+          allowed === "all" ? undefined : inArray(locations.id, allowed),
+        ),
+      )
+      .orderBy(asc(locations.name)),
+  );
 }

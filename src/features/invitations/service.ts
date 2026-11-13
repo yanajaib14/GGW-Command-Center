@@ -80,7 +80,7 @@ function isUniqueViolation(error: unknown): boolean {
   return e?.code === "23505" || e?.cause?.code === "23505";
 }
 
-async function activePermissions(
+export async function activePermissions(
   tx: Tx,
   organizationId: string,
   roleId: string,
