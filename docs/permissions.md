@@ -4,9 +4,9 @@ Source of truth: `src/server/auth/permissions.ts` (catalog and default matrix) a
 
 ## Status
 
-In place: the catalog, the frozen default matrix, scopes (`hasPermission`, `allowedLocationIds`), the guardrail functions `assertCanGrant`, `assertCanInviteWithRole` and `assertNotSelf`, permission-filtered navigation in `src/server/nav.ts`, and the server gate `requirePermission` / `requireActor` in `src/server/auth/require.ts`. Loading permissions from the database (`loadActor` in `src/server/auth/load-actor.ts`, through `isPermission`) is written; it is verified once the test database is configured.
+All of Version 1 is built: the catalog, the frozen default matrix, scopes, the guardrails, permission-filtered navigation (`src/server/nav.ts`), the server gate (`requirePermission` / `requireActor` in `src/server/auth/require.ts`), `loadActor`, the staff, invitation, role and location services, audit writes, and `npm run setup:owner`.
 
-Planned, not built yet: the last-Owner rule, audit log writes, the staff and role services, and `npm run setup:owner`. Sections below mark each item.
+Not yet done: `setup:owner` has not been run against production, and the manual checklist on a deployed preview (spec section 17) is pending the owner.
 
 ## Catalog
 
@@ -40,7 +40,7 @@ The catalog is a typed list in code (in place). The database stores which roles 
 | `locations.manage` | yes | | |
 | `audit.view` | yes | | |
 
-`DEFAULT_ROLE_PERMISSIONS` holds this matrix. It is frozen. The setup command (`npm run setup:owner`, planned) will copy it into the database; after that, the database is what counts.
+`DEFAULT_ROLE_PERMISSIONS` holds this matrix. It is frozen. The setup command (`npm run setup:owner`) copies it into the database; after that, the database is what counts.
 
 ## Scopes
 
@@ -63,12 +63,14 @@ Examples:
 
 ## Guardrails
 
-Status is marked per rule. The functions live in `src/server/auth/guardrails.ts`.
+Status: all in place. The grant checks live in `src/server/auth/guardrails.ts`; the services in `src/features/*/service.ts` apply them.
 
-- **No escalation (in place).** An actor can grant only a role whose permissions they all hold at that scope. Inviting into a role that includes `staff.invite` also needs `staff.manage` at that scope, so Managers can invite Employees only.
-- **Last Owner (planned).** The last active, organization-wide Owner cannot be revoked, suspended or marked as left.
-- **No self-change (in place, `assertNotSelf`).** An actor cannot change their own role assignments or status.
-- **Audit (planned).** Invitations (created, accepted, revoked, expired on use), role grants and revokes, employee status changes, role permission changes, location changes and setup runs each write an audit entry in the same transaction as the change.
+- **No escalation.** An actor can grant only a role whose permissions they all hold at that scope (`assertCanGrant`). Changing role permissions applies the same check to the permissions being added. A status change or role revoke on a person also needs `assertCanGrant` over every active assignment of that person, so nobody can suspend someone with broader access than their own.
+- **Invite rules.** Managers can invite Employees only: a role that includes `staff.invite` also needs `staff.manage` at that scope (`assertCanInviteWithRole`). Owner invitations are organization-wide. Re-inviting an email revokes its earlier open invitation. Invitations expire after 7 days and work once.
+- **Verified email on accept.** Accepting needs a signed-in user whose verified email equals the invited email (case-insensitive). Email one-time-code sign-in is the only sign-in, so a session email is verified. A leaked link alone does nothing.
+- **Last Owner.** The last active, organization-wide Owner cannot be revoked, suspended or marked as left. The check runs inside the transaction after locking the organization row, so two concurrent changes cannot both pass. The last active location cannot be closed.
+- **No self-change (`assertNotSelf`).** An actor cannot change their own role assignments or status.
+- **Audit.** Setup runs, invitations (created, revoked, accepted), role grants and revokes, status changes, profile updates, role creation and permission changes, and location changes each write an audit entry in the same transaction as the change (`writeAudit`). The audit log never stores tokens or invite links.
 
 `assertCanGrant` and `assertCanInviteWithRole` are not gates by themselves. Call `requirePermission("staff.manage" | "staff.invite", scope)` first.
 

@@ -12,7 +12,8 @@ Stack: Next.js 16 (App Router, `src/`), TypeScript, Tailwind CSS 4, Drizzle on N
 - `npm run test:unit`: `vitest run tests/unit`
 - `npm run test:integration`: Vitest with `vitest.integration.config.mts` (needs `TEST_DATABASE_URL`; globalSetup migrates the test branch)
 - `npm run db:generate` / `db:migrate`: drizzle-kit generate / apply migrations (`DATABASE_URL`; run migrations with the direct, non-pooler Neon URL)
-- `npm run test:e2e`: `playwright test`
+- `npm run setup:owner`: one-time bootstrap of the first Owner (needs `DATABASE_URL`; run only with owner approval)
+- `npm run test:e2e`: `playwright test` (read-only signed-out checks; run `npm run build` first; set `E2E_BASE_URL` to test a deployed URL)
 - `npm run check`: typecheck, lint and unit tests; must pass before every commit
 
 ## Folder map
@@ -95,7 +96,7 @@ Working rules:
 
 ## Docs to update when architecture changes
 
-- `docs/architecture.md`: layers, data flow, folder responsibilities
+- [`docs/architecture.md`](docs/architecture.md): layers, data flow, folder responsibilities
 - [`docs/permissions.md`](docs/permissions.md): permission catalog, role matrix, scopes, guardrails
 - [`docs/decisions/`](docs/decisions/): add a numbered decision record for any significant choice
 - `CLAUDE.md` (this file) and `.env.example` when commands, structure or environment variables change

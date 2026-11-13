@@ -12,7 +12,7 @@ Use Drizzle ORM for data access and drizzle-kit for migrations. Schema lives in 
 
 Conventions: UUID primary keys (`gen_random_uuid()`), `created_at` and `updated_at` as `timestamptz` (UTC), and `organization_id` on every table. No hard deletes in application code; inactive rows use a status field or `revoked_at` / `ended_at`.
 
-Migrations that drop or rewrite data need explicit owner approval before they run. Tests that touch a database use `TEST_DATABASE_URL` (a Neon test branch), never `DATABASE_URL`.
+Migrations are applied with the direct (non-pooler) Neon URL. Migrations that drop or rewrite data need explicit owner approval before they run. Tests that touch a database use `TEST_DATABASE_URL` (a Neon test branch), never `DATABASE_URL`.
 
 ## Consequences
 

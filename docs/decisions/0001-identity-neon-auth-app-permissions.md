@@ -14,7 +14,7 @@ The app needs sign-in, plus roles per location, custom permissions, invitations 
 
 Neon Auth (managed Better Auth, `@neon/auth`) handles identity only: users and sessions in the `neon_auth` schema. The app owns employees, roles, permissions, assignments, invitations and the audit log in its own tables.
 
-One server function, `requirePermission`, is the only gate. It reads the session, loads the active employee, and checks permissions from active assignments. Nothing is cached beyond a request.
+One server function, `requirePermission` (or `requireActor` when any active employee may proceed), is the only gate. It reads the session, loads the active employee, and checks permissions from active assignments. Nothing is cached beyond a request.
 
 We do not call `betterAuth()`, add a Better Auth database adapter, or run Better Auth migrations. Neon hosts the auth server.
 
