@@ -1000,3 +1000,27 @@ export async function listGrantableRoles(
     return result;
   });
 }
+
+/** Active locations where the actor holds `staff.manage` (for granting roles). */
+export async function listManageableLocations(
+  actor: Actor,
+  deps: StaffDeps = {},
+): Promise<InvitableLocation[]> {
+  if (!hasPermission(actor, "staff.manage", "any")) throw new Forbidden();
+  const allowed = allowedLocationIds(actor, "staff.manage");
+  if (allowed !== "all" && allowed.length === 0) return [];
+  const transaction = deps.transaction ?? withTransaction;
+  return transaction((tx) =>
+    tx
+      .select({ id: locations.id, name: locations.name })
+      .from(locations)
+      .where(
+        and(
+          eq(locations.organizationId, actor.organizationId),
+          eq(locations.status, "active"),
+          allowed === "all" ? undefined : inArray(locations.id, allowed),
+        ),
+      )
+      .orderBy(asc(locations.name)),
+  );
+}

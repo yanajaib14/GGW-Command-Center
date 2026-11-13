@@ -1,8 +1,9 @@
 import "server-only";
 import { and, desc, eq, sql, type SQL } from "drizzle-orm";
+import { z } from "zod";
 import { auditLog, employees, locations } from "@/db/schema";
 import { hasPermission, type Actor } from "@/server/auth/actor";
-import { Forbidden } from "@/server/auth/errors";
+import { Forbidden, Invalid } from "@/server/auth/errors";
 import { withTransaction, type Tx } from "@/server/db/client";
 
 export type TxRunner = <T>(fn: (tx: Tx) => Promise<T>) => Promise<T>;
@@ -43,9 +44,12 @@ export async function listAudit(
 ): Promise<AuditRow[]> {
   if (!hasPermission(actor, "audit.view", "organization")) throw new Forbidden();
   const limit = Math.min(Math.max(Math.trunc(opts.limit ?? AUDIT_PAGE_SIZE) || 1, 1), MAX_LIMIT);
+  if (opts.before && !(opts.before instanceof Date) && !z.uuid().safeParse(opts.before.id).success) {
+    throw new Invalid("That page marker is not valid.");
+  }
   const transaction = deps.transaction ?? withTransaction;
 
-  const ms = sql`date_trunc('milliseconds', ${auditLog.createdAt})`;
+  const ms =sql`date_trunc('milliseconds', ${auditLog.createdAt})`;
   let cursor: SQL | undefined;
   if (opts.before) {
     const at = opts.before instanceof Date ? opts.before : opts.before.createdAt;
