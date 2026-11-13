@@ -180,6 +180,12 @@ export async function listStaff(
   deps: StaffDeps = {},
 ): Promise<StaffRow[]> {
   if (!hasPermission(actor, "staff.view", "any")) throw new Forbidden();
+  if (
+    opts.locationId !== undefined &&
+    !z.uuid().safeParse(opts.locationId).success
+  ) {
+    throw new Invalid("Choose a valid location.");
+  }
   const allowed = allowedLocationIds(actor, "staff.view");
   if (
     opts.locationId !== undefined &&

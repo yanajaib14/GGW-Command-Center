@@ -14,6 +14,7 @@ import { writeAudit } from "@/server/audit/write";
 import { hasPermission, type Actor, type Scope } from "@/server/auth/actor";
 import { Conflict, Forbidden, Invalid, NotFound } from "@/server/auth/errors";
 import { assertCanInviteWithRole } from "@/server/auth/guardrails";
+import { loadActorByEmployeeId } from "@/server/auth/load-actor";
 import { isPermission, type Permission } from "@/server/auth/permissions";
 import type { SessionUser } from "@/server/auth/session";
 import { withTransaction, type Tx } from "@/server/db/client";
@@ -454,7 +455,9 @@ export async function hasAcceptedInvitation(
  *
  * Errors: `Forbidden("wrong account")` for an email mismatch; otherwise
  * `Invalid(status)` where status is unknown, accepted, revoked, expired or
- * unavailable (the employee is no longer in the `invited` state).
+ * unavailable (the employee is no longer in the `invited` state, or the
+ * inviter is no longer active or no longer allowed to invite this role at
+ * this scope: an invitation never outlives its inviter's authority).
  */
 export async function acceptInvitation(
   user: SessionUser,
@@ -505,6 +508,32 @@ export async function acceptInvitation(
       if (invite.revokedAt) throw new Invalid("revoked");
       if (invite.expiresAt.getTime() <= Date.now()) throw new Invalid("expired");
       if (employee.status !== "invited") throw new Invalid("unavailable");
+
+      // An invitation never outlives its inviter's authority. Setup invitations
+      // (no inviter) are unaffected.
+      if (invite.invitedByEmployeeId !== null) {
+        const inviter = await loadActorByEmployeeId(
+          tx,
+          invite.organizationId,
+          invite.invitedByEmployeeId,
+        );
+        if (
+          !inviter ||
+          !hasPermission(inviter, "staff.invite", scopeOf(invite))
+        ) {
+          throw new Invalid("unavailable");
+        }
+        try {
+          assertCanInviteWithRole(
+            inviter,
+            await activePermissions(tx, invite.organizationId, invite.roleId),
+            invite.grantsOrgWide ? null : invite.locationId,
+          );
+        } catch (error) {
+          if (error instanceof Forbidden) throw new Invalid("unavailable");
+          throw error;
+        }
+      }
 
       const now = new Date();
       await tx

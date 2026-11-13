@@ -363,6 +363,39 @@ describe("acceptInvitation", () => {
     expect(accepted?.actorEmployeeId).toBe(employeeId);
   });
 
+  it("refuses when the inviter was suspended after inviting", async () => {
+    const manager = await actorFor("manager", org.locationId);
+    const { invitationId, inviteUrl } = await createInvitation(manager, input(), deps);
+    await testDb()
+      .update(employees)
+      .set({ status: "suspended" })
+      .where(eq(employees.id, manager.employeeId));
+    await expect(
+      acceptInvitation(userFor("som@example.com"), tokenOf(inviteUrl), deps),
+    ).rejects.toMatchObject({ message: "unavailable" });
+
+    const db = testDb();
+    const [inv] = await db.select().from(invitations).where(eq(invitations.id, invitationId));
+    expect(inv?.acceptedAt).toBeNull();
+    const [emp] = await db.select().from(employees).where(eq(employees.email, "som@example.com"));
+    expect(emp?.status).toBe("invited");
+  });
+
+  it("refuses when the inviter's role was revoked after inviting", async () => {
+    const manager = await actorFor("manager", org.locationId);
+    const { invitationId, inviteUrl } = await createInvitation(manager, input(), deps);
+    await testDb()
+      .update(roleAssignments)
+      .set({ revokedAt: new Date() })
+      .where(eq(roleAssignments.employeeId, manager.employeeId));
+    await expect(
+      acceptInvitation(userFor("som@example.com"), tokenOf(inviteUrl), deps),
+    ).rejects.toBeInstanceOf(Invalid);
+
+    const [inv] = await testDb().select().from(invitations).where(eq(invitations.id, invitationId));
+    expect(inv?.acceptedAt).toBeNull();
+  });
+
   it("wrong account cannot accept", async () => {
     const manager = await actorFor("manager", org.locationId);
     const { invitationId, inviteUrl } = await createInvitation(manager, input(), deps);

@@ -7,6 +7,12 @@ test("sign-in page loads with email field", async ({ page }) => {
   await expect(page.getByLabel("Email")).toBeVisible();
 });
 
+test("sign-in response carries security headers", async ({ request }) => {
+  const response = await request.get("/sign-in");
+  expect(response.headers()["referrer-policy"]).toBe("no-referrer");
+  expect(response.headers()["x-frame-options"]).toBe("DENY");
+});
+
 for (const path of ["/hub", "/manager", "/owner"]) {
   test(`signed-out visitor is redirected from ${path} to /sign-in`, async ({ page }) => {
     await page.goto(path);

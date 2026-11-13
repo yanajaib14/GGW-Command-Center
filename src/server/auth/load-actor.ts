@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, or, sql, type SQL } from "drizzle-orm";
 import {
   employees,
   locations,
@@ -33,6 +33,31 @@ import type { SessionUser } from "./session";
 export async function loadActor(
   db: Db | Tx,
   user: SessionUser,
+): Promise<Actor | null> {
+  return loadActorWhere(db, eq(employees.authUserId, user.id));
+}
+
+/**
+ * Same as `loadActor` but looks the employee up by id inside one organization
+ * (used to re-check an inviter's authority). Still requires `active` status.
+ */
+export async function loadActorByEmployeeId(
+  db: Db | Tx,
+  organizationId: string,
+  employeeId: string,
+): Promise<Actor | null> {
+  return loadActorWhere(
+    db,
+    and(
+      eq(employees.id, employeeId),
+      eq(employees.organizationId, organizationId),
+    ),
+  );
+}
+
+async function loadActorWhere(
+  db: Db | Tx,
+  match: SQL | undefined,
 ): Promise<Actor | null> {
   const activeLocation = sql`exists (
     select 1 from ${locations}
@@ -78,9 +103,7 @@ export async function loadActor(
         isNull(rolePermissions.revokedAt),
       ),
     )
-    .where(
-      and(eq(employees.authUserId, user.id), eq(employees.status, "active")),
-    )
+    .where(and(match, eq(employees.status, "active")))
     .orderBy(asc(roleAssignments.grantedAt), asc(roleAssignments.id));
 
   const first = rows[0];

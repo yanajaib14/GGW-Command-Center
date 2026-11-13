@@ -33,7 +33,9 @@ export function AcceptPanel({
       if (result.code === "FORBIDDEN" && result.message === "unverified email") {
         setError("Sign in with the emailed code to accept this invitation.");
       } else if (result.code === "FORBIDDEN") setWrongAccount(true);
-      else setError(result.message);
+      else if (result.message === "unavailable") {
+        setError("This invite is no longer valid. Ask for a new one.");
+      } else setError(result.message);
     } catch {
       setError(GENERIC_ERROR);
     }

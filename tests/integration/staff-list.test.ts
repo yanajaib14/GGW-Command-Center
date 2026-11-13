@@ -13,7 +13,7 @@ import {
   listStaff,
 } from "@/features/staff/service";
 import type { Actor } from "@/server/auth/actor";
-import { Forbidden, NotFound } from "@/server/auth/errors";
+import { Forbidden, Invalid, NotFound } from "@/server/auth/errors";
 import { loadActor } from "@/server/auth/load-actor";
 import type { Tx } from "@/server/db/client";
 import {
@@ -86,6 +86,11 @@ describe("listStaff", () => {
     for (const r of rows) {
       for (const role of r.roles) expect(role.locationName).toBe("Test Location");
     }
+  });
+
+  it("rejects a malformed location id", async () => {
+    const owner = await actorFor("owner", null);
+    await expect(listStaff(owner, { locationId: "not-a-uuid" }, deps)).rejects.toBeInstanceOf(Invalid);
   });
 
   it("manager cannot widen the list with another location id", async () => {
