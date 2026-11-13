@@ -10,8 +10,8 @@
 
 # testing
 /coverage
-/test-results
-/playwright-report
+/test-results/
+/playwright-report/
 
 # next.js
 /.next/
