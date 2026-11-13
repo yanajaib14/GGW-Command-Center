@@ -14,16 +14,18 @@ describe("sessionUserFrom", () => {
   it("reads the user from data.user, not the top level", () => {
     expect(
       sessionUserFrom({
-        data: { session: {}, user: { id: "u1", email: "a@example.com" } },
+        data: { session: {}, user: { id: "u1", email: "a@example.com", emailVerified: true } },
         error: null,
       }),
-    ).toEqual({ id: "u1", email: "a@example.com" });
+    ).toEqual({ id: "u1", email: "a@example.com", emailVerified: true });
   });
 
   it("lower-cases the email", () => {
     expect(
-      sessionUserFrom({ data: { session: {}, user: { id: "u1", email: "A@Example.COM" } } }),
-    ).toEqual({ id: "u1", email: "a@example.com" });
+      sessionUserFrom({
+        data: { session: {}, user: { id: "u1", email: "A@Example.COM", emailVerified: true } },
+      }),
+    ).toEqual({ id: "u1", email: "a@example.com", emailVerified: true });
   });
 
   it("returns null when there is no session", () => {
@@ -46,6 +48,24 @@ describe("sessionUserFrom", () => {
   });
 });
 
+describe("sessionUserFrom emailVerified", () => {
+  it("is true only when the user is marked verified", () => {
+    expect(
+      sessionUserFrom({
+        data: { session: {}, user: { id: "u1", email: "a@x.test", emailVerified: true } },
+      }),
+    ).toMatchObject({ emailVerified: true });
+    expect(
+      sessionUserFrom({
+        data: { session: {}, user: { id: "u1", email: "a@x.test", emailVerified: false } },
+      }),
+    ).toMatchObject({ emailVerified: false });
+    expect(
+      sessionUserFrom({ data: { session: {}, user: { id: "u1", email: "a@x.test" } } }),
+    ).toMatchObject({ emailVerified: false });
+  });
+});
+
 describe("sessionUserFrom requires a session", () => {
   it("returns null when data.session is missing", () => {
     expect(
@@ -62,10 +82,10 @@ describe("sessionUserFrom requires a session", () => {
 describe("getSessionUser", () => {
   it("returns the user for a valid session", async () => {
     getSession.mockResolvedValue({
-      data: { session: { id: "s1" }, user: { id: "u1", email: "A@x.test" } },
+      data: { session: { id: "s1" }, user: { id: "u1", email: "A@x.test", emailVerified: true } },
       error: null,
     });
-    expect(await getSessionUser()).toEqual({ id: "u1", email: "a@x.test" });
+    expect(await getSessionUser()).toEqual({ id: "u1", email: "a@x.test", emailVerified: true });
   });
 
   it("fails closed when getSession throws, logging only the error name", async () => {

@@ -449,6 +449,9 @@ export async function hasAcceptedInvitation(
  * invitation row, so concurrent accepts run one after another and the second
  * sees `accepted_at`. Same user again: returns the same employee id.
  *
+ * The session email must also be verified (`Forbidden("unverified email")`),
+ * so an unverified claim of the invited address cannot accept it.
+ *
  * Errors: `Forbidden("wrong account")` for an email mismatch; otherwise
  * `Invalid(status)` where status is unknown, accepted, revoked, expired or
  * unavailable (the employee is no longer in the `invited` state).
@@ -476,6 +479,7 @@ export async function acceptInvitation(
       if (!peek) throw new Invalid("unknown");
       // Identity binding: the invitation is for one verified email address.
       if (userEmail !== peek.email) throw new Forbidden("wrong account");
+      if (!user.emailVerified) throw new Forbidden("unverified email");
 
       const [employee] = await tx
         .select()

@@ -1,11 +1,17 @@
 import "server-only";
 import { getAuth } from "./neon";
 
-/** The Neon Auth user behind the current request. Identity only, no access. */
-export type SessionUser = { id: string; email: string };
+/**
+ * The Neon Auth user behind the current request. Identity only, no access.
+ * `emailVerified` is true only when the auth server says the email is verified.
+ */
+export type SessionUser = { id: string; email: string; emailVerified: boolean };
 
 type SessionResultLike = {
-  data?: { session?: unknown; user?: { id?: string; email?: string } | null } | null;
+  data?: {
+    session?: unknown;
+    user?: { id?: string; email?: string; emailVerified?: boolean } | null;
+  } | null;
   error?: unknown;
 };
 
@@ -18,7 +24,11 @@ export function sessionUserFrom(result: SessionResultLike): SessionUser | null {
   if (!result.data?.session) return null;
   const user = result.data.user;
   if (!user?.id || !user.email) return null;
-  return { id: user.id, email: user.email.toLowerCase() };
+  return {
+    id: user.id,
+    email: user.email.toLowerCase(),
+    emailVerified: user.emailVerified === true,
+  };
 }
 
 /**

@@ -22,7 +22,7 @@ beforeEach(async () => {
 });
 
 function userFor(authUserId: string) {
-  return { id: authUserId, email: "someone@example.test" };
+  return { id: authUserId, email: "someone@example.test", emailVerified: true };
 }
 
 async function closedLocation(): Promise<string> {

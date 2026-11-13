@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Actor } from "@/server/auth/actor";
 import { experienceFromPath, resolveLanding } from "@/server/landing";
 
-const user = { id: "u1", email: "a@example.test" };
+const user = { id: "u1", email: "a@example.test", emailVerified: true };
 
 function actorWith(permissions: Actor["assignments"][number]["permissions"]): Actor {
   return {

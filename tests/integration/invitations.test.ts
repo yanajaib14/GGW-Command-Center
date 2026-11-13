@@ -50,7 +50,7 @@ async function actorFor(
     email,
     assignments: [{ roleId: org.roles[roleKey], locationId }],
   });
-  const actor = await loadActor(testDb(), { id: authUserId, email });
+  const actor = await loadActor(testDb(), { id: authUserId, email, emailVerified: true });
   if (!actor) throw new Error("actorFor: actor did not load");
   return actor;
 }
@@ -70,6 +70,7 @@ const tokenOf = (url: string) => url.split("/invite/")[1] ?? "";
 const userFor = (email: string, id = `auth-${crypto.randomUUID()}`): SessionUser => ({
   id,
   email,
+  emailVerified: true,
 });
 
 async function auditActions(): Promise<string[]> {
@@ -150,7 +151,7 @@ describe("createInvitation", () => {
       email,
       assignments: [{ roleId: org.roles.employee, locationId: org.locationId }],
     });
-    const actor = await loadActor(testDb(), { id: authUserId, email });
+    const actor = await loadActor(testDb(), { id: authUserId, email, emailVerified: true });
     await expect(createInvitation(actor as Actor, input(), deps)).rejects.toBeInstanceOf(Forbidden);
   });
 
@@ -286,7 +287,11 @@ describe("revokeInvitation", () => {
       email: "f@example.test",
       assignments: [{ roleId: foreignOrg.roles.owner, locationId: null }],
     });
-    const foreignOwner = await loadActor(testDb(), { id: foreignAuth, email: "f@example.test" });
+    const foreignOwner = await loadActor(testDb(), {
+      id: foreignAuth,
+      email: "f@example.test",
+      emailVerified: true,
+    });
     await expect(revokeInvitation(foreignOwner as Actor, invitationId, deps)).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
@@ -373,6 +378,25 @@ describe("acceptInvitation", () => {
     expect(emp?.authUserId).toBeNull();
     expect(await db.select().from(roleAssignments).where(eq(roleAssignments.organizationId, org.orgId))
       .then((rows) => rows.filter((r) => r.employeeId === emp?.id))).toHaveLength(0);
+  });
+
+  it("an unverified session email cannot accept", async () => {
+    const manager = await actorFor("manager", org.locationId);
+    const { invitationId, inviteUrl } = await createInvitation(manager, input(), deps);
+    await expect(
+      acceptInvitation(
+        { ...userFor("som@example.com"), emailVerified: false },
+        tokenOf(inviteUrl),
+        deps,
+      ),
+    ).rejects.toBeInstanceOf(Forbidden);
+
+    const db = testDb();
+    const [inv] = await db.select().from(invitations).where(eq(invitations.id, invitationId));
+    expect(inv?.acceptedAt).toBeNull();
+    const [emp] = await db.select().from(employees).where(eq(employees.email, "som@example.com"));
+    expect(emp?.status).toBe("invited");
+    expect(emp?.authUserId).toBeNull();
   });
 
   it("session email casing does not matter", async () => {

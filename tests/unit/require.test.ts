@@ -30,7 +30,7 @@ function makeActor(assignments: readonly [RoleKey, string | null][]): Actor {
   };
 }
 
-const user: SessionUser = { id: "auth-user-1", email: "a@example.com" };
+const user: SessionUser = { id: "auth-user-1", email: "a@example.com", emailVerified: true };
 const signedIn = () => Promise.resolve(user);
 const signedOut = () => Promise.resolve(null);
 
