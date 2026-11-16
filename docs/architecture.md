@@ -30,7 +30,7 @@ Neon Auth knows who the user is. The app decides what they may do. See [ADR 0001
 | `src/features/*` | Services and thin server actions: invitations, staff, roles, locations, audit, setup. |
 | `src/server/auth` | Permission catalog and matrix, `Actor`, `loadActor`, `requirePermission`, guardrails, errors, session. |
 | `src/server/audit` | `writeAudit`, called inside the caller's transaction. |
-| `src/server/db` | Drizzle client, `withTransaction`, row locks. |
+| `src/server/db` | Drizzle client (server-only), `withTransaction`, row locks. The database is shared with the launch app; this app owns only its 8 tables ([ADR 0004](decisions/0004-shared-database-with-launch-app.md)). |
 | `src/server/nav.ts` | Navigation filtered by the actor's permissions. |
 | `src/db/schema`, `src/db/migrations` | Tables (one file per group) and generated SQL. |
 | `scripts/setup-owner.ts` | One-time bootstrap of the first Owner (`npm run setup:owner`). |

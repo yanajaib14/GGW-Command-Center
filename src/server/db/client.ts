@@ -1,3 +1,4 @@
+import "server-only";
 import { neonConfig, Pool } from "@neondatabase/serverless";
 import { drizzle, type NeonDatabase } from "drizzle-orm/neon-serverless";
 import * as schema from "@/db/schema";

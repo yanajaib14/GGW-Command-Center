@@ -11,7 +11,7 @@ Stack: Next.js 16 (App Router, `src/`), TypeScript, Tailwind CSS 4, Drizzle on N
 - `npm run lint`: `eslint .`
 - `npm run test:unit`: `vitest run tests/unit`
 - `npm run test:integration`: Vitest with `vitest.integration.config.mts` (needs `TEST_DATABASE_URL`; globalSetup migrates the test branch)
-- `npm run db:generate` / `db:migrate`: drizzle-kit generate / apply migrations (`DATABASE_URL`; run migrations with the direct, non-pooler Neon URL)
+- `npm run db:generate` / `db:migrate`: drizzle-kit generate / apply migrations (`DATABASE_URL`; run migrations with the direct, non-pooler Neon URL). `drizzle-kit push` is disabled: the database is shared with the launch app.
 - `npm run setup:owner`: one-time bootstrap of the first Owner (needs `DATABASE_URL`; run only with owner approval)
 - `npm run test:e2e`: `playwright test` (read-only signed-out checks; run `npm run build` first; set `E2E_BASE_URL` to test a deployed URL)
 - `npm run check`: typecheck, lint and unit tests; must pass before every commit
@@ -60,7 +60,7 @@ src/features/locations/{service,actions}.ts
 src/features/audit/service.ts
 src/features/setup/service.ts
 tests/unit/*, tests/integration/*, tests/e2e/*, tests/helpers/*
-docs/architecture.md, docs/permissions.md, docs/decisions/000{1,2,3}-*.md
+docs/architecture.md, docs/permissions.md, docs/decisions/000{1,2,3,4}-*.md
 CLAUDE.md, AGENTS.md, .env.example
 ```
 
@@ -82,6 +82,7 @@ Global constraints:
 - Touch targets at least 48 px; mobile bottom tabs below 768 px, left sidebar at 768 px and above; WCAG AA contrast in light and dark.
 - Secrets never committed or pasted into chat. `.env.example` holds names only; `.env.local` is git-ignored.
 - Migrations that drop or rewrite data need explicit owner approval before they run.
+- The database (Neon project "Launch app", branch `production`) is shared with the launch app. Its 26 launch tables (tasks, vendors, menu_items, inventory_items and others) hold real data: never drop, truncate, rename, re-create or alter them. This app owns only the 8 tables in `APP_OWNED_TABLES` (`drizzle.config.ts`). Launch-table conventions: BIGINT identity ids, quoted camelCase columns, JSONB lists, NUMERIC money (convert to numbers on read). New features get new tables, with owner approval. See `docs/decisions/0004-shared-database-with-launch-app.md`.
 - Tests that touch a database use `TEST_DATABASE_URL` (a Neon test branch), never `DATABASE_URL`.
 - Do not call `betterAuth()`, add a Better Auth database adapter, or run Better Auth migrations: Neon hosts the auth server.
 
